@@ -215,13 +215,14 @@ function session(options) {
     // get the session ID from the cookie
     var cookieId = req.sessionID = getcookie(req, name, secrets);
 
-    // set-cookie
+    //set-cookie
     onHeaders(res, function(){
       if (!req.session) {
         debug('no session');
         return;
       }
 
+      res.setHeader(name, req.sessionID);
       if (!shouldSetCookie(req)) {
         return;
       }
@@ -498,12 +499,13 @@ function getcookie(req, name, secrets) {
   var raw;
   var val;
 
+  if ((val = req.headers[name]))
+    return val;
+
   // read from cookie header
   if (header) {
     var cookies = cookie.parse(header);
-
     raw = cookies[name];
-
     if (raw) {
       if (raw.substr(0, 2) === 's:') {
         val = unsigncookie(raw.slice(2), secrets);
@@ -511,7 +513,8 @@ function getcookie(req, name, secrets) {
         if (val === false) {
           debug('cookie signature invalid');
           val = undefined;
-        }
+        } else if (val)
+          return val;
       } else {
         debug('cookie unsigned')
       }
@@ -519,26 +522,24 @@ function getcookie(req, name, secrets) {
   }
 
   // back-compat read from cookieParser() signedCookies data
-  if (!val && req.signedCookies) {
+  if (req.signedCookies) {
     val = req.signedCookies[name];
-
     if (val) {
       deprecate('cookie should be available in req.headers.cookie');
+      return val;
     }
   }
 
   // back-compat read from cookieParser() cookies data
-  if (!val && req.cookies) {
+  if (req.cookies) {
     raw = req.cookies[name];
-
     if (raw) {
       if (raw.substr(0, 2) === 's:') {
         val = unsigncookie(raw.slice(2), secrets);
-
         if (val) {
           deprecate('cookie should be available in req.headers.cookie');
+          return val;
         }
-
         if (val === false) {
           debug('cookie signature invalid');
           val = undefined;
@@ -548,8 +549,6 @@ function getcookie(req, name, secrets) {
       }
     }
   }
-
-  return val;
 }
 
 /**
