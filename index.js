@@ -417,7 +417,8 @@ function session(options) {
         return false;
       }
 
-      return cookieId === req.sessionID && !shouldSave(req);
+      return cookieId === req.sessionID/* && !shouldSave(req)*/;
+      //ThePatriot: this call to `shouldSave` is useless, it can only be false when `shouldTouch` is called
     }
 
     // determine if cookie should be set on response
